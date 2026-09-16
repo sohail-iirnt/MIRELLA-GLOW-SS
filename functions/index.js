@@ -2,45 +2,12 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const Razorpay = require('razorpay');
-
+const crypto = require('crypto');
 admin.initializeApp();
 const db = admin.firestore();
-const RAZORPAY_KEY_ID = defineSecret('RAZORPAY_KEY_ID');
-const RAZORPAY_KEY_SECRET = defineSecret('RAZORPAY_KEY_SECRET');
-
-async function requireAdmin(uid) {
-  if (!uid) throw new HttpsError('unauthenticated', 'Authentication required.');
-  const snap = await db.doc(`admins/${uid}`).get();
-  if (!snap.exists || snap.data().active !== true) throw new HttpsError('permission-denied', 'Admin access required.');
-}
-
-exports.createRazorpayOrder = onCall({ secrets: [RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET], region: 'asia-south1' }, async (request) => {
-  const { amount, currency = 'INR', receipt } = request.data || {};
-  if (!Number.isInteger(amount) || amount < 100) throw new HttpsError('invalid-argument', 'Amount must be an integer number of paise and at least ₹1.');
-  const razorpay = new Razorpay({ key_id: RAZORPAY_KEY_ID.value(), key_secret: RAZORPAY_KEY_SECRET.value() });
-  try {
-    const order = await razorpay.orders.create({ amount, currency, receipt: String(receipt || `MG-${Date.now()}`).slice(0, 40), payment_capture: 1 });
-    return { id: order.id, amount: order.amount, currency: order.currency, keyId: RAZORPAY_KEY_ID.value() };
-  } catch (e) {
-    console.error(e);
-    throw new HttpsError('internal', 'Unable to create payment order.');
-  }
-});
-
-exports.verifyRazorpayPayment = onCall({ secrets: [RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET], region: 'asia-south1' }, async (request) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = request.data || {};
-  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) throw new HttpsError('invalid-argument', 'Payment verification data is incomplete.');
-  const crypto = require('crypto');
-  const expected = crypto.createHmac('sha256', RAZORPAY_KEY_SECRET.value()).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex');
-  if (expected !== razorpaySignature) throw new HttpsError('permission-denied', 'Invalid payment signature.');
-  await db.doc(`orders/${orderId}`).update({ paymentStatus: 'paid', razorpayOrderId, razorpayPaymentId, verifiedAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { verified: true };
-});
-
-exports.setOrderPaymentStatus = onCall(async (request) => {
-  await requireAdmin(request.auth?.uid);
-  const { orderId, paymentStatus } = request.data || {};
-  if (!orderId || !['pending','paid','failed','refunded'].includes(paymentStatus)) throw new HttpsError('invalid-argument', 'Invalid order payment status.');
-  await db.doc(`orders/${orderId}`).update({ paymentStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { ok: true };
-});
+const KEY_ID = defineSecret('RAZORPAY_KEY_ID');
+const KEY_SECRET = defineSecret('RAZORPAY_KEY_SECRET');
+async function requireAdmin(uid){if(!uid)throw new HttpsError('unauthenticated','Authentication required.');const s=await db.doc(`admins/${uid}`).get();if(!s.exists||s.data().active!==true)throw new HttpsError('permission-denied','Admin access required.');}
+exports.createRazorpayOrder=onCall({secrets:[KEY_ID,KEY_SECRET],region:'asia-south1'},async req=>{const {amount,currency='INR',receipt}=req.data||{};if(!Number.isInteger(amount)||amount<100)throw new HttpsError('invalid-argument','Invalid amount.');const razorpay=new Razorpay({key_id:KEY_ID.value(),key_secret:KEY_SECRET.value()});try{const order=await razorpay.orders.create({amount,currency,receipt:String(receipt||`MG-${Date.now()}`).slice(0,40),payment_capture:1});return{id:order.id,amount:order.amount,currency:order.currency,keyId:KEY_ID.value()};}catch(e){console.error(e);throw new HttpsError('internal','Unable to create payment order.');}});
+exports.verifyRazorpayPayment=onCall({secrets:[KEY_ID,KEY_SECRET],region:'asia-south1'},async req=>{const {razorpayOrderId,razorpayPaymentId,razorpaySignature,orderId}=req.data||{};if(!razorpayOrderId||!razorpayPaymentId||!razorpaySignature||!orderId)throw new HttpsError('invalid-argument','Incomplete payment verification data.');const expected=crypto.createHmac('sha256',KEY_SECRET.value()).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex');if(!crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(String(razorpaySignature))))throw new HttpsError('permission-denied','Invalid payment signature.');const orderRef=db.doc(`orders/${orderId}`);const snap=await orderRef.get();if(!snap.exists)throw new HttpsError('not-found','Order not found.');const order=snap.data();if(order.paymentStatus==='paid')return{verified:true};const razorpay=new Razorpay({key_id:KEY_ID.value(),key_secret:KEY_SECRET.value()});let remote;try{remote=await razorpay.orders.fetch(razorpayOrderId);}catch(e){throw new HttpsError('internal','Unable to validate payment order.');}if(remote.currency!=='INR'||Number(remote.amount)!==Math.round(Number(order.total||0)*100))throw new HttpsError('failed-precondition','Payment amount does not match the order.');await orderRef.update({paymentStatus:'paid',razorpayOrderId,razorpayPaymentId,verifiedAt:admin.firestore.FieldValue.serverTimestamp(),updatedAt:admin.firestore.FieldValue.serverTimestamp()});return{verified:true};});
+exports.setOrderPaymentStatus=onCall(async req=>{await requireAdmin(req.auth?.uid);const {orderId,paymentStatus}=req.data||{};if(!orderId||!['pending','paid','failed','refunded'].includes(paymentStatus))throw new HttpsError('invalid-argument','Invalid payment status.');await db.doc(`orders/${orderId}`).update({paymentStatus,updatedAt:admin.firestore.FieldValue.serverTimestamp()});return{ok:true};});
