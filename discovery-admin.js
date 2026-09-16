@@ -1,8 +1,3 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
-import {getAuth} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,updateDoc} from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js';
-const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
 const concerns=['Acne & Breakouts','Pigmentation','Dark Spots','Dry Skin','Dehydration','Dullness','Sensitivity','Redness','Oil Control','Pores','Hair Fall','Frizz','Damage','Dandruff'];
 const results=['Glow','Hydration','Brightening','Barrier Care','Smooth Skin','Clear Skin','Hair Repair','Frizz Control','Scalp Care'];
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
