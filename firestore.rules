@@ -10,6 +10,10 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     match /orders/{orderId} {
       allow create: if request.resource.data.keys().hasAll(['orderNumber','customer','items','total','status','paymentStatus','paymentMethod'])
         && request.resource.data.status == 'new'
