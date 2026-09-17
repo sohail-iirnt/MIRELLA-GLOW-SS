@@ -15,4 +15,5 @@ if(typeof document!=='undefined'){
     document.head.appendChild(style);
     setTimeout(()=>import('./storefront-checkout-ui.js').catch(e=>console.error('[Mirella Glow] checkout UI failed to load',e)),0);
   }
+  if(location.pathname.endsWith('/admin.html')&&new URLSearchParams(location.search).get('open')==='media') setTimeout(()=>import('./admin-media-bridge.js').catch(e=>console.error('[Mirella Glow] media redirect bridge failed',e)),0);
 }
