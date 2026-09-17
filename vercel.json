@@ -4,9 +4,5 @@
     {"source":"/","headers":[{"key":"content-type","value":"text/html; charset=utf-8"}]},
     {"source":"/:path*.html","headers":[{"key":"content-type","value":"text/html; charset=utf-8"}]},
     {"source":"/:path*.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"cache-control","value":"no-store, max-age=0"}]}
-  ],
-  "rewrites":[
-    {"source":"/","destination":"https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/index.html?v=202609170830"},
-    {"source":"/:path*","destination":"https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/:path*?v=202609170830"}
   ]
 }
