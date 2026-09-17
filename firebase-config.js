@@ -6,11 +6,13 @@ export const firebaseConfig = {
   messagingSenderId: "728355246638",
   appId: "1:728355246638:web:930656169ecf8298a245bf"
 };
+if(typeof window!=='undefined') window.MIRELLA_FIREBASE_CONFIG=firebaseConfig;
 if(typeof document!=='undefined'){
   if(document.getElementById('concernGrid')) import('./storefront-slider.js');
   if(location.pathname==='/'||location.pathname==='/index.html'){
     const style=document.createElement('style');
     style.textContent='.story-art.has-store-image{background-size:contain!important;background-repeat:no-repeat!important;background-position:center!important;background-color:#f7e9e3!important}.story-art.has-store-image:after{display:none!important}.story-art.has-store-image span{display:none!important}.brand img{width:auto!important;height:auto!important;max-width:58px!important;max-height:58px!important;object-fit:contain!important;object-position:center!important;flex:0 0 auto!important}';
     document.head.appendChild(style);
+    setTimeout(()=>import('./storefront-checkout-ui.js').catch(e=>console.error('[Mirella Glow] checkout UI failed to load',e)),0);
   }
 }
