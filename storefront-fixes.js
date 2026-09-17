@@ -4,3 +4,4 @@
 // Kept as an inert entry point so older deployments/bookmarks do not fail
 // if this module is still referenced by index.html.
 export {};
+// Vercel production redeploy trigger: 2026-09-17
