@@ -17,6 +17,7 @@ if(typeof document!=='undefined'){
     setTimeout(()=>import('./storefront-storage-free-checkout.js').catch(e=>console.error('[Mirella Glow] storage-free checkout guard failed to load',e)),180);
     setTimeout(()=>import('./storefront-checkout-fixes.js').catch(e=>console.error('[Mirella Glow] checkout fixes failed to load',e)),300);
     setTimeout(()=>import('./storefront-payment-proof-fix-v3.js').catch(e=>console.error('[Mirella Glow] payment proof v3 failed to load',e)),750);
+    setTimeout(()=>import('./footer-trust-badges.js').catch(e=>console.error('[Mirella Glow] footer trust badges failed to load',e)),900);
   }
   if(location.pathname.endsWith('/admin.html')&&new URLSearchParams(location.search).get('open')==='media') setTimeout(()=>import('./admin-media-bridge.js').catch(e=>console.error('[Mirella Glow] media redirect bridge failed to load',e)),0);
 }
