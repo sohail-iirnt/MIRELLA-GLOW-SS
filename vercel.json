@@ -11,6 +11,7 @@
     {"source":"/app.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
     {"source":"/firebase-config.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
     {"source":"/storefront-checkout-ui.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/storefront-checkout-ui-v2.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
     {"source":"/admin-media-bridge.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
     {"source":"/product.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
     {"source":"/product-content.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
