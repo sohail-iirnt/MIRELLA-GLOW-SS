@@ -4,17 +4,25 @@ service firebase.storage {
     function isAdmin() {
       return request.auth != null && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)) && firestore.get(/databases/(default)/documents/admins/$(request.auth.uid)).data.active == true;
     }
+
     match /products/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
+
     match /store/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Customer payment-proof uploads must work before authentication.
+    // Keep reads admin-only so submitted payment proofs are not publicly browseable.
     match /payment-proofs/{allPaths=**} {
       allow read: if isAdmin();
-      allow write: if request.resource.size < 5 * 1024 * 1024 && request.resource.contentType.matches('image/.*');
+      allow create: if request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow update, delete: if isAdmin();
     }
   }
 }
