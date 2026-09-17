@@ -18,4 +18,5 @@ if(typeof document!=='undefined'){
     setTimeout(()=>import('./storefront-payment-proof-fix-v3.js').catch(e=>console.error('[Mirella Glow] payment proof v3 failed to load',e)),750);
   }
   if(location.pathname.endsWith('/admin.html')&&new URLSearchParams(location.search).get('open')==='media') setTimeout(()=>import('./admin-media-bridge.js').catch(e=>console.error('[Mirella Glow] media redirect bridge failed',e)),0);
+  if(location.pathname.endsWith('/admin.html')) setTimeout(()=>import('./admin-orders-shipping-enhancements.js').catch(e=>console.error('[Mirella Glow] admin order enhancements failed to load',e)),600);
 }
