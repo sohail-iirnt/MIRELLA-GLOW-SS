@@ -6,3 +6,4 @@ export const firebaseConfig = {
   messagingSenderId: "728355246638",
   appId: "1:728355246638:web:930656169ecf8298a245bf"
 };
+if(typeof document!=='undefined'&&document.getElementById('concernGrid')) import('./storefront-slider.js');
