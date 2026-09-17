@@ -1,13 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
+    {"source":"/","headers":[{"key":"content-type","value":"text/html; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/product.html","headers":[{"key":"content-type","value":"text/html; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/app.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/firebase-config.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/product.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]},
+    {"source":"/product-enhancements.js","headers":[{"key":"content-type","value":"application/javascript; charset=utf-8"},{"key":"content-security-policy","value":"default-src * data: blob: 'unsafe-inline' 'unsafe-eval'"}]}
+  ],
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/index.html"
-    },
-    {
-      "source": "/:path*",
-      "destination": "https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/:path*"
-    }
+    {"source":"/","destination":"https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/index.html"},
+    {"source":"/:path*","destination":"https://raw.githubusercontent.com/sohail-iirnt/MIRELLA-GLOW-SS/main/:path*"}
   ]
 }
