@@ -15,6 +15,7 @@ if(typeof document!=='undefined'){
     document.head.appendChild(style);
     setTimeout(()=>import('./storefront-checkout-ui-v2.js').catch(e=>console.error('[Mirella Glow] checkout UI failed to load',e)),0);
     setTimeout(()=>import('./storefront-checkout-fixes.js').catch(e=>console.error('[Mirella Glow] checkout fixes failed to load',e)),250);
+    setTimeout(()=>import('./storefront-payment-proof-fix-v3.js').catch(e=>console.error('[Mirella Glow] payment proof v3 failed to load',e)),750);
   }
   if(location.pathname.endsWith('/admin.html')&&new URLSearchParams(location.search).get('open')==='media') setTimeout(()=>import('./admin-media-bridge.js').catch(e=>console.error('[Mirella Glow] media redirect bridge failed',e)),0);
 }
