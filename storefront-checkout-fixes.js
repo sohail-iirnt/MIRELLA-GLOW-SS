@@ -8,107 +8,12 @@ const $ = id => document.getElementById(id);
 const money = n => '₹' + Number(n || 0).toLocaleString('en-IN');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function cart(){
-  try { const v = JSON.parse(localStorage.getItem('mirella-cart') || '[]'); return Array.isArray(v) ? v : []; }
-  catch { return []; }
-}
-function activeCart(){ return cart().filter(x => !x.unavailable && Number(x.qty || 0) > 0); }
-function subtotal(items){ return items.reduce((s,x) => s + Number(x.price || 0) * Number(x.qty || 0), 0); }
-function shipping(sub){ return sub >= 999 ? 0 : 99; }
-function compressProof(file){
-  return new Promise((resolve,reject)=>{
-    if (!file) return reject(new Error('Please upload your successful UPI payment screenshot.'));
-    if (!file.type.startsWith('image/')) return reject(new Error('Payment proof must be an image.'));
-    if (file.size > 5 * 1024 * 1024) return reject(new Error('Payment screenshot must be 5 MB or smaller.'));
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read the payment screenshot.'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('The selected image could not be processed.'));
-      img.onload = () => {
-        const max = 1400, scale = Math.min(1, max / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        let quality = 0.78, data = canvas.toDataURL('image/jpeg', quality);
-        while (data.length > 900000 && quality > 0.45) { quality -= 0.08; data = canvas.toDataURL('image/jpeg', quality); }
-        if (data.length > 950000) return reject(new Error('This screenshot is too large to save securely. Please choose a smaller screenshot.'));
-        resolve(data);
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function makeOrderHandler(form){
-  return async event => {
-    event.preventDefault();
-    const items = activeCart();
-    if (!items.length) { alert('Your bag is empty.'); return; }
-    if (!form.reportValidity()) return;
-    const button = $('mgPlaceOrder'), error = $('mgCheckoutError');
-    if (!button) return;
-    button.disabled = true; button.textContent = 'Placing your order…'; if (error) error.textContent = '';
-    try {
-      const payment = document.querySelector('input[name="mgPayment"]:checked')?.value || 'cod';
-      const customer = {
-        name: $('mgName')?.value.trim() || '', phone: $('mgPhone')?.value.trim() || '', email: $('mgEmail')?.value.trim() || '',
-        address: $('mgAddress')?.value.trim() || '', city: $('mgCity')?.value.trim() || '', state: $('mgState')?.value.trim() || '', pincode: $('mgPincode')?.value.trim() || ''
-      };
-      let proofDataUrl = '';
-      if (payment === 'upi') proofDataUrl = await compressProof($('mgProof')?.files?.[0]);
-      const orderItems = items.map(x => ({ productId:x.id, name:x.name, price:Number(x.price||0), qty:Number(x.qty||0), imageUrl:x.imageUrl||'' }));
-      const sub = subtotal(orderItems), ship = shipping(sub);
-      const orderNumber = `MG-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-      const order = {
-        orderNumber, customer, items:orderItems, subtotal:sub, shipping:ship, total:sub+ship,
-        status:'new', paymentStatus:'pending', paymentMethod:payment,
-        paymentProofDataUrl:proofDataUrl, paymentProofStorageStatus: payment === 'upi' ? 'firestore-fallback' : 'not-required',
-        upiId:payment === 'upi' ? (window.MIRELLA_STORE_UPI_ID || '') : '', createdAt:serverTimestamp(), updatedAt:serverTimestamp()
-      };
-      await addDoc(collection(db, 'orders'), order);
-      localStorage.removeItem('mirella-cart');
-      form.style.display = 'none';
-      const result = $('checkoutResult');
-      if (result) result.innerHTML = `<div class="mg-success"><span class="eyebrow">Order received</span><h2>Thank you.</h2><div class="number">${esc(orderNumber)}</div><p>${payment==='upi'?'Your payment screenshot has been received securely. The Mirella team will verify the payment and process your order.':'Your COD order has been recorded successfully. The Mirella team will contact you using the details provided.'}</p><button type="button" class="hero-cta" id="mgContinue">Continue shopping</button></div>`;
-      $('mgContinue')?.addEventListener('click', () => { $('checkoutModal')?.classList.remove('open'); location.hash='shop'; });
-      document.dispatchEvent(new CustomEvent('mirella:cart-updated'));
-    } catch (e) {
-      console.error('[Mirella Glow] patched checkout failed', e);
-      if (error) error.textContent = e?.code === 'permission-denied' ? 'The store is not currently accepting orders. Please contact Mirella Glow support.' : (e.message || 'We could not place your order. Please check your details and try again.');
-      button.disabled = false; button.textContent = `Place order · ${money(subtotal(items) + shipping(subtotal(items)))}`;
-    }
-  };
-}
-
-function patchCheckout(){
-  const form = $('checkoutForm');
-  if (!form || form.dataset.mgPatched === '1') return;
-  form.dataset.mgPatched = '1';
-  const modalCard = $('checkoutModal')?.querySelector('.modal-card');
-  if (modalCard) modalCard.classList.add('mg-checkout-card');
-  form.onsubmit = makeOrderHandler(form);
-}
-
-function injectFixStyle(){
-  if ($('mirellaCheckoutScrollFix')) return;
-  const style = document.createElement('style'); style.id = 'mirellaCheckoutScrollFix';
-  style.textContent = `
-    #checkoutModal{overflow:hidden!important;align-items:center!important;padding:18px!important}
-    #checkoutModal .modal-card.mg-checkout-card{max-height:calc(100dvh - 36px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
-    #checkoutModal .modal-card.mg-checkout-card #checkoutForm{overflow-y:auto!important;overscroll-behavior:contain!important;min-height:0!important;padding-right:4px!important;scrollbar-gutter:stable!important}
-    #checkoutModal .modal-card.mg-checkout-card #checkoutForm::-webkit-scrollbar{width:7px}
-    #checkoutModal .modal-card.mg-checkout-card #checkoutForm::-webkit-scrollbar-thumb{background:#d8c4ba;border-radius:20px}
-    @media(max-width:700px){#checkoutModal{align-items:flex-start!important;padding:10px!important}#checkoutModal .modal-card.mg-checkout-card{max-height:calc(100dvh - 20px)!important;border-radius:18px!important}#checkoutModal .modal-card.mg-checkout-card #checkoutForm{padding-right:2px!important}}
-  `;
-  document.head.appendChild(style);
-}
-
-injectFixStyle();
-const observer = new MutationObserver(() => patchCheckout());
-observer.observe(document.body, { childList:true, subtree:true });
-patchCheckout();
-window.addEventListener('load', patchCheckout);
+function cart(){try{const v=JSON.parse(localStorage.getItem('mirella-cart')||'[]');return Array.isArray(v)?v:[]}catch{return[]}}
+function activeCart(){return cart().filter(x=>!x.unavailable&&Number(x.qty||0)>0)}
+function subtotal(items){return items.reduce((s,x)=>s+Number(x.price||0)*Number(x.qty||0),0)}
+function shipping(sub){return sub>=999?0:99}
+function compressProof(file){return new Promise((resolve,reject)=>{if(!file)return reject(new Error('Please upload your successful UPI payment screenshot.'));if(!file.type.startsWith('image/'))return reject(new Error('Payment proof must be an image.'));if(file.size>5*1024*1024)return reject(new Error('Payment screenshot must be 5 MB or smaller.'));const reader=new FileReader();reader.onerror=()=>reject(new Error('Could not read the payment screenshot.'));reader.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error('The selected image could not be processed.'));img.onload=()=>{const max=1400,scale=Math.min(1,max/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);let quality=.78,data=canvas.toDataURL('image/jpeg',quality);while(data.length>900000&&quality>.45){quality-=.08;data=canvas.toDataURL('image/jpeg',quality)}if(data.length>950000)return reject(new Error('This screenshot is too large to save securely. Please choose a smaller screenshot.'));resolve(data)};img.src=reader.result};reader.readAsDataURL(file)})}
+function makeOrderHandler(form){return async event=>{event.preventDefault();const items=activeCart();if(!items.length){alert('Your bag is empty.');return}if(!form.reportValidity())return;const button=$('mgPlaceOrder'),error=$('mgCheckoutError');if(!button)return;button.disabled=true;button.textContent='Placing your order…';if(error)error.textContent='';try{const payment=document.querySelector('input[name="mgPayment"]:checked')?.value||'cod';const customer={name:$('mgName')?.value.trim()||'',phone:$('mgPhone')?.value.trim()||'',email:$('mgEmail')?.value.trim()||'',address:$('mgAddress')?.value.trim()||'',city:$('mgCity')?.value.trim()||'',state:$('mgState')?.value.trim()||'',pincode:$('mgPincode')?.value.trim()||''};let proofDataUrl='';if(payment==='upi')proofDataUrl=await compressProof($('mgProof')?.files?.[0]);const orderItems=items.map(x=>({productId:x.id,name:x.name,price:Number(x.price||0),qty:Number(x.qty||0),imageUrl:x.imageUrl||''}));const sub=subtotal(orderItems),ship=shipping(sub);const orderNumber=`MG-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;const upiId=document.querySelector('.mg-upi b')?.textContent?.trim()||'';const order={orderNumber,customer,items:orderItems,subtotal:sub,shipping:ship,total:sub+ship,status:'new',paymentStatus:'pending',paymentMethod:payment,paymentProofDataUrl:proofDataUrl,paymentProofStorageStatus:payment==='upi'?'firestore-fallback':'not-required',upiId:payment==='upi'?upiId:'',createdAt:serverTimestamp(),updatedAt:serverTimestamp()};await addDoc(collection(db,'orders'),order);localStorage.removeItem('mirella-cart');form.style.display='none';const result=$('checkoutResult');if(result)result.innerHTML=`<div class="mg-success"><span class="eyebrow">Order received</span><h2>Thank you.</h2><div class="number">${esc(orderNumber)}</div><p>${payment==='upi'?'Your payment screenshot has been received securely. The Mirella team will verify the payment and process your order.':'Your COD order has been recorded successfully. The Mirella team will contact you using the details provided.'}</p><button type="button" class="hero-cta" id="mgContinue">Continue shopping</button></div>`;$('mgContinue')?.addEventListener('click',()=>{$('checkoutModal')?.classList.remove('open');location.hash='shop'});document.dispatchEvent(new CustomEvent('mirella:cart-updated'))}catch(e){console.error('[Mirella Glow] patched checkout failed',e);if(error)error.textContent=e?.code==='permission-denied'?'The store is not currently accepting orders. Please contact Mirella Glow support.':(e.message||'We could not place the order. Please check your details and try again.');button.disabled=false;button.textContent=`Place order · ${money(subtotal(items)+shipping(subtotal(items)))}`}}}
+function patchCheckout(){const form=$('checkoutForm');if(!form||form.dataset.mgPatched==='1')return;form.dataset.mgPatched='1';const modalCard=$('checkoutModal')?.querySelector('.modal-card');if(modalCard)modalCard.classList.add('mg-checkout-card');form.onsubmit=makeOrderHandler(form)}
+function injectFixStyle(){if($('mirellaCheckoutScrollFix'))return;const style=document.createElement('style');style.id='mirellaCheckoutScrollFix';style.textContent=`#checkoutModal{overflow:hidden!important;align-items:center!important;padding:18px!important}#checkoutModal .modal-card.mg-checkout-card{max-height:calc(100dvh - 36px)!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}#checkoutModal .modal-card.mg-checkout-card #checkoutForm{overflow-y:auto!important;overscroll-behavior:contain!important;min-height:0!important;padding-right:4px!important;scrollbar-gutter:stable!important}#checkoutModal .modal-card.mg-checkout-card #checkoutForm::-webkit-scrollbar{width:7px}#checkoutModal .modal-card.mg-checkout-card #checkoutForm::-webkit-scrollbar-thumb{background:#d8c4ba;border-radius:20px}@media(max-width:700px){#checkoutModal{align-items:flex-start!important;padding:10px!important}#checkoutModal .modal-card.mg-checkout-card{max-height:calc(100dvh - 20px)!important;border-radius:18px!important}#checkoutModal .modal-card.mg-checkout-card #checkoutForm{padding-right:2px!important}}`;document.head.appendChild(style)}
+injectFixStyle();const observer=new MutationObserver(()=>patchCheckout());observer.observe(document.body,{childList:true,subtree:true});patchCheckout();window.addEventListener('load',patchCheckout);
